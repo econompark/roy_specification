@@ -1,9 +1,9 @@
-*! version 1.0.0 M. Park 28Mar2025
+*! version 1.0.1 M. Park 2Apr2025
 
 version 18
 set matastrict on
 
-// TODO - make names clean.
+// TODO - use better names
 
 // -------------------------------------------------------------------- wald ---
 mata:

@@ -1,4 +1,4 @@
-*! version 1.0.0 M. Park 28Mar2025
+*! version 1.0.1 M. Park 2Apr2025
 
 program define roy_specification, rclass byable(recall)
 	version 18
@@ -32,6 +32,7 @@ program define roy_specification, rclass byable(recall)
 		mata: instance = roy_wald()
 		mata: instance.report()
 		mata: instance.returns()
+		mata: mata drop instance // prevent crash
 
 		return scalar N         = N
 		return scalar stat      = stat
@@ -66,9 +67,9 @@ program define roy_specification, rclass byable(recall)
 		_rmcoll `X', expand
 
 		mata: instance = roy_lr()
-	
 		mata: instance.report()
 		mata: instance.returns()
+		mata: mata drop instance // prevent crash
 
 		return scalar N         = N
 		return scalar kx        = kx
@@ -99,7 +100,6 @@ program define roy_specification, rclass byable(recall)
 		
 		gettoken Y : varlist
 		gettoken Z : smiv
-		gettoken D : select // it is unnecessary
 		gettoken G : cube
 	
 		markout `touse' `Y' `Z'
@@ -109,6 +109,7 @@ program define roy_specification, rclass byable(recall)
 		mata: instance = roy_sm()
 		mata: instance.returns()
 		mata: instance.report()
+		mata: mata drop instance // prevent crash
 
 		return scalar N         = N
 		return scalar Tn        = Tn
@@ -121,4 +122,5 @@ program define roy_specification, rclass byable(recall)
 	}
 end
 
+// -------------------------------------------------------------------- mata ---
 include roy_specification.mata, adopath
