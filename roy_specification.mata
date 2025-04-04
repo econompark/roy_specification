@@ -1,4 +1,4 @@
-*! version 1.0.1 M. Park 2Apr2025
+*! version 1.0.2 M. Park 4Apr2025
 
 version 18
 set matastrict on
@@ -45,17 +45,17 @@ class roy_wald {
 	void           mleu()
 	
 	// wald statistic
-	real scalar    teststat()
-	real scalar    pval()
-	real rowvector reject()
-	real colvector coefs()
+	real scalar    computeTestStatistic()
+	real scalar    computePValue()
+	real rowvector checkReject()
+	real colvector computeCoefs()
 	real colvector h()
 	real matrix    Dh()
 
 	// report, returns
-	string matrix  coefsname()
-	void           report()
-	void           returns()
+	string matrix  saveCoefsName()
+	void           reportResult()
+	void           saveResult()
 }
 
 void roy_wald::new() {
@@ -131,7 +131,7 @@ void roy_wald::mleu() {
 	moptimize(M)
 }
 
-real colvector roy_wald::coefs() {
+real colvector roy_wald::computeCoefs() {
 	return((gam \ bet0 \ bet1 \ sig0 \ sig1 \ rho0 \ rho1))
 }
 
@@ -144,7 +144,7 @@ real matrix roy_wald::Dh() {
 	-rho0 :* gam, rho1 :* gam, -sig0 :* gam, sig1 :* gam))
 }
 
-real scalar roy_wald::teststat() {
+real scalar roy_wald::computeTestStatistic() {
 	if (kx == 1) {
 		// the Wald t-test statistic
 		return(h() / sqrt(Dh() * Om * Dh()'))
@@ -152,23 +152,23 @@ real scalar roy_wald::teststat() {
 	if (st_local("ADJ") == "" | st_local("ADJ") == "none") {
 		return((h()' * invsym(Dh() * Om * Dh()') * h()))
 	} else if (st_local("ADJ") == "df") {
-		return(((N - length(coefs())) / N) * (h()' * invsym(Dh() * Om * Dh()') * h()))
+		return(((N - length(computeCoefs())) / N) * (h()' * invsym(Dh() * Om * Dh()') * h()))
 	}
 }
 
-real scalar roy_wald::pval() {
+real scalar roy_wald::computePValue() {
 	if (kx == 1) {
-		return(2 * (1 - t(df, abs(teststat()))))
+		return(2 * (1 - t(df, abs(computeTestStatistic()))))
 	} else if (kx > 1) {
-		return(1 - chi2(df, teststat()))
+		return(1 - chi2(df, computeTestStatistic()))
 	}
 }
 
-real rowvector roy_wald::reject() {
-	return(pval() :< alp)
+real rowvector roy_wald::checkReject() {
+	return(computePValue() :< alp)
 }
 
-string matrix roy_wald::coefsname() {
+string matrix roy_wald::saveCoefsName() {
 	string colvector colnames, eqs
 
 	if (kx == 1) {
@@ -181,43 +181,43 @@ string matrix roy_wald::coefsname() {
 	return((eqs, colnames))
 }
 
-void roy_wald::report() {
+void roy_wald::reportResult() {
 	printf("\n")
 	printf("{txt}%s \n", "{space 3}Wald test for Roy models")
 	printf("{txt}%s \n", "{space 3}Ho: selection rule is the original Roy selection mechanism")
 	printf("\n")
 	if (kx == 1) {
-		printf("{txt}%s {res}%g {txt}%s {res}%5.4f \n", "{space 3}t(", df, ")    = ", teststat())
+		printf("{txt}%s {res}%g {txt}%s {res}%5.4f \n", "{space 3}t(", df, ")    = ", computeTestStatistic())
 	} else if (kx > 1) {
-		printf("{txt}%s {res}%g {txt}%s {res}%5.4f \n", "{space 3}chi2(", df, ")    = ", teststat())
+		printf("{txt}%s {res}%g {txt}%s {res}%5.4f \n", "{space 3}chi2(", df, ")    = ", computeTestStatistic())
 	}
 	if (kx == 1) {
-		printf("{txt}%s {res}%5.4f \n", "{space 3}Prob > |t|  = ", pval())
+		printf("{txt}%s {res}%5.4f \n", "{space 3}Prob > |t|  = ", computePValue())
 	} else if (kx > 1) {
-		printf("{txt}%s {res}%5.4f \n", "{space 3}Prob > chi2  = ", pval())
+		printf("{txt}%s {res}%5.4f \n", "{space 3}Prob > chi2  = ", computePValue())
 	}
-	if (reject()[2] == 1) {
+	if (checkReject()[2] == 1) {
 		printf("{txt}%s \n", "{space 3}Ho is rejected at the 5% level")
-	} else if (reject()[2] == 0) {
+	} else if (checkReject()[2] == 0) {
 		printf("{txt}%s \n", "{space 3}Ho is not rejected at the 5% level")
 	}
 }
 
-void roy_wald::returns() {
+void roy_wald::saveResult() {
 	st_numscalar("N", N)
-	st_numscalar("stat", teststat())
+	st_numscalar("stat", computeTestStatistic())
 	st_numscalar("df", df)
-	st_numscalar("p", pval())
-	st_numscalar("reject_10", reject()[1])
-	st_numscalar("reject_5", reject()[2])
-	st_numscalar("reject_1", reject()[3])
+	st_numscalar("p", computePValue())
+	st_numscalar("reject_10", checkReject()[1])
+	st_numscalar("reject_5", checkReject()[2])
+	st_numscalar("reject_1", checkReject()[3])
 	st_numscalar("kx", kx)
 	
-	st_matrix("theta", coefs()')
+	st_matrix("theta", computeCoefs()')
 	st_matrix("V", Om)
-	st_matrixcolstripe("theta", coefsname())
+	st_matrixcolstripe("theta", saveCoefsName())
 	st_matrixrowstripe("theta", J(1, 2, " "))
-	st_matrixcolstripe("V", coefsname())
+	st_matrixcolstripe("V", saveCoefsName())
 	st_matrixrowstripe("V", J(3 * kx + 4, 2, " "))
 
 	if (st_local("V") == "") st_local("V", "mle")

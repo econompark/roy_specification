@@ -1,4 +1,4 @@
-*! version 1.0.1 M. Park 2Apr2025
+*! version 1.0.2 M. Park 4Apr2025
 
 program define roy_specification, rclass byable(recall)
 	version 18
@@ -30,8 +30,8 @@ program define roy_specification, rclass byable(recall)
 		_rmcoll `X', expand
 		
 		mata: instance = roy_wald()
-		mata: instance.report()
-		mata: instance.returns()
+		mata: instance.reportResult()
+		mata: instance.saveResult()
 		mata: mata drop instance // prevent crash
 
 		return scalar N         = N
