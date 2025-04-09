@@ -1,4 +1,4 @@
-*! version 1.0.2 M. Park 4Apr2025
+*! version 1.0.3 M. Park 9Apr2025
 
 program define roy_specification, rclass byable(recall)
 	version 18

@@ -1,4 +1,4 @@
-*! version 1.0.2 M. Park 4Apr2025
+*! version 1.0.3 M. Park 9Apr2025
 
 version 18
 set matastrict on
@@ -7,7 +7,7 @@ set matastrict on
 
 // -------------------------------------------------------------------- wald ---
 mata:
-void llk(transmorphic M, real rowvector b, real colvector lnf) {
+void logLikelihoodFunction(transmorphic M, real rowvector b, real colvector lnf) {
 	real colvector p1, p2, p3, p4, p5, p6, p7, y, d
 
 	p1 = moptimize_util_xb(M, b, 1) // gamma
@@ -41,8 +41,8 @@ class roy_wald {
 	real scalar    sig0, sig1, rho0, rho1, sig
 	real colvector gam, bet0, bet1
 	real matrix    Om
-	transmorphic   M
-	void           mleu()
+	transmorphic   moptimHandle
+	void           estimateMaximumLikelihood()
 	
 	// wald statistic
 	real scalar    computeTestStatistic()
@@ -60,6 +60,7 @@ class roy_wald {
 
 void roy_wald::new() {
 	N = rows(st_data(., st_local("Y"), st_local("touse")))
+
 	if (st_local("X") == "") {
 		X  = J(N, 1, 1)
 		kx = 1
@@ -68,6 +69,7 @@ void roy_wald::new() {
 		X  = select(X, colsum(X :== 0) :!= N)
 		kx = cols(X) + 1
 	}
+
 	if (kx == 1) {
 		df = N - 7
 	} else if (kx > 1) {
@@ -75,18 +77,19 @@ void roy_wald::new() {
 	}
 	
 	alp = (.1, .05, .01)
-	M   = moptimize_init()
 	
-	mleu()
+	moptimHandle = moptimize_init()
+	
+	estimateMaximumLikelihood() // it uses a lot of memory
 
-	gam  = moptimize_result_coefs(M)[1 .. kx]'
-	bet0 = moptimize_result_coefs(M)[(kx + 1) .. (2 * kx)]'
-	bet1 = moptimize_result_coefs(M)[(2 * kx + 1) .. (3 * kx)]'
+	gam  = moptimize_result_coefs(moptimHandle)[1 .. kx]'
+	bet0 = moptimize_result_coefs(moptimHandle)[(kx + 1) .. (2 * kx)]'
+	bet1 = moptimize_result_coefs(moptimHandle)[(2 * kx + 1) .. (3 * kx)]'
 	
-	sig0 = moptimize_result_coefs(M)[(3 * kx + 1)]
-	sig1 = moptimize_result_coefs(M)[(3 * kx + 2)]
-	rho0 = moptimize_result_coefs(M)[(3 * kx + 3)]
-	rho1 = moptimize_result_coefs(M)[(3 * kx + 4)]
+	sig0 = moptimize_result_coefs(moptimHandle)[(3 * kx + 1)]
+	sig1 = moptimize_result_coefs(moptimHandle)[(3 * kx + 2)]
+	rho0 = moptimize_result_coefs(moptimHandle)[(3 * kx + 3)]
+	rho1 = moptimize_result_coefs(moptimHandle)[(3 * kx + 4)]
 	
 	if (st_local("absoff") == "") {
 		sig = abs(sig1 * rho1 - sig0 * rho0)
@@ -95,40 +98,40 @@ void roy_wald::new() {
 	}
 	
 	if (st_local("V") == "" | st_local("V") == "mle") {
-		Om = moptimize_result_V(M)
+		Om = moptimize_result_V(moptimHandle)
 	} else if (st_local("V") == "robust") {
-		Om = moptimize_result_V_robust(M)
+		Om = moptimize_result_V_robust(moptimHandle)
 	}
 }
 
-void roy_wald::mleu() {
-	moptimize_init_evaluator(M, &llk())
+void roy_wald::estimateMaximumLikelihood() {
+	moptimize_init_evaluator(moptimHandle, &logLikelihoodFunction())
 	
-	moptimize_init_depvar(M, 1, st_data(., st_local("Y"), st_local("touse")))
-	moptimize_init_depvar(M, 2, st_data(., st_local("D"), st_local("touse")))
+	moptimize_init_depvar(moptimHandle, 1, st_data(., st_local("Y"), st_local("touse")))
+	moptimize_init_depvar(moptimHandle, 2, st_data(., st_local("D"), st_local("touse")))
 
 	if (kx == 1) {
-		moptimize_init_eq_indepvars(M, 1, "")
-		moptimize_init_eq_indepvars(M, 2, "")
-		moptimize_init_eq_indepvars(M, 3, "")
+		moptimize_init_eq_indepvars(moptimHandle, 1, "")
+		moptimize_init_eq_indepvars(moptimHandle, 2, "")
+		moptimize_init_eq_indepvars(moptimHandle, 3, "")
 	} else if (kx > 1) {
-		moptimize_init_eq_indepvars(M, 1, X)
-		moptimize_init_eq_indepvars(M, 2, X)
-		moptimize_init_eq_indepvars(M, 3, X)
+		moptimize_init_eq_indepvars(moptimHandle, 1, X)
+		moptimize_init_eq_indepvars(moptimHandle, 2, X)
+		moptimize_init_eq_indepvars(moptimHandle, 3, X)
 	}
 	
-	moptimize_init_eq_indepvars(M, 4, "")
-	moptimize_init_eq_indepvars(M, 5, "")
-	moptimize_init_eq_indepvars(M, 6, "")
-	moptimize_init_eq_indepvars(M, 7, "")
+	moptimize_init_eq_indepvars(moptimHandle, 4, "")
+	moptimize_init_eq_indepvars(moptimHandle, 5, "")
+	moptimize_init_eq_indepvars(moptimHandle, 6, "")
+	moptimize_init_eq_indepvars(moptimHandle, 7, "")
 	
-	moptimize_init_tracelevel(M, "none")
-	moptimize_init_valueid(M, "Log likelihood")
+	moptimize_init_tracelevel(moptimHandle, "none")
+	moptimize_init_valueid(moptimHandle, "Log likelihood")
 	
-	moptimize_init_search(M, "on")
-	moptimize_init_search_random(M, "off")
+	moptimize_init_search(moptimHandle, "on")
+	moptimize_init_search_random(moptimHandle, "off")
 	
-	moptimize(M)
+	moptimize(moptimHandle)
 }
 
 real colvector roy_wald::computeCoefs() {
@@ -146,7 +149,6 @@ real matrix roy_wald::Dh() {
 
 real scalar roy_wald::computeTestStatistic() {
 	if (kx == 1) {
-		// the Wald t-test statistic
 		return(h() / sqrt(Dh() * Om * Dh()'))
 	}
 	if (st_local("ADJ") == "" | st_local("ADJ") == "none") {
@@ -177,6 +179,7 @@ string matrix roy_wald::saveCoefsName() {
 		colnames = colshape(J(1, kx, ("gam" \ "bet0" \ "bet1")) :+ ///
 		("_" :+ strofreal((1 .. (kx - 1), 0))), 1) \ "sig0" \ "sig1" \ "rho0" \ "rho1"
 	}
+	
 	eqs = J(length(colnames), 1, "")
 	return((eqs, colnames))
 }
@@ -186,16 +189,19 @@ void roy_wald::reportResult() {
 	printf("{txt}%s \n", "{space 3}Wald test for Roy models")
 	printf("{txt}%s \n", "{space 3}Ho: selection rule is the original Roy selection mechanism")
 	printf("\n")
+	
 	if (kx == 1) {
 		printf("{txt}%s {res}%g {txt}%s {res}%5.4f \n", "{space 3}t(", df, ")    = ", computeTestStatistic())
 	} else if (kx > 1) {
 		printf("{txt}%s {res}%g {txt}%s {res}%5.4f \n", "{space 3}chi2(", df, ")    = ", computeTestStatistic())
 	}
+	
 	if (kx == 1) {
 		printf("{txt}%s {res}%5.4f \n", "{space 3}Prob > |t|  = ", computePValue())
 	} else if (kx > 1) {
 		printf("{txt}%s {res}%5.4f \n", "{space 3}Prob > chi2  = ", computePValue())
 	}
+	
 	if (checkReject()[2] == 1) {
 		printf("{txt}%s \n", "{space 3}Ho is rejected at the 5% level")
 	} else if (checkReject()[2] == 0) {
